@@ -47,8 +47,20 @@ pub struct Progress {
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct QueueEpisode {
+    pub index: usize,
+    pub state: QueueEpisodeState,
     pub episode: Episode,
     pub language: Language,
     pub progress: Progress,
+}
+
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
+pub enum QueueEpisodeState {
+    Waiting,
+    Fetching,
+    Downloading,
+    Paused,
+    Success,
+    Failed,
 }
 

@@ -5,7 +5,7 @@ use tokio::{sync::{mpsc, Mutex}, task};
 use std::collections::VecDeque;
 use tokio::time::{sleep, Duration};
 
-use crate::QueueEpisode;
+use crate::{structs::{Progress, QueueEpisodeState}, QueueEpisode};
 
 pub struct AsyncQueue {
     items: Arc<Mutex<VecDeque<QueueEpisode>>>,
@@ -30,10 +30,11 @@ impl AsyncQueue {
         }
     }
 
-    pub async fn enqueue(&self, item: QueueEpisode, app_handle: tauri::AppHandle) {
-  
+    pub async fn enqueue(&self, mut item: QueueEpisode, app_handle: tauri::AppHandle) {
+        
         {
             let mut items = self.items.lock().await;
+            item.index = items.len();
             items.push_back(item);
         } 
 
@@ -66,11 +67,18 @@ impl AsyncQueue {
     
             loop {
                 let item_option = {
-                    let items = items_clone.lock().await;
-                    items.get(index).cloned()
+                    let mut items = items_clone.lock().await;
+                    items.pop_front()
                 };
     
                 if let Some(item) = item_option {
+                    
+                    println!("{:?} {:?}", item.state, QueueEpisodeState::Waiting);
+                    if item.state != QueueEpisodeState::Waiting {
+                        index += 1;
+                        continue;
+                    }
+                    
                     process_episode(item, app_handle.clone()).await;
                     let _ = sender_clone.send(()).await;
                     index += 1;
@@ -110,14 +118,36 @@ impl AsyncQueue {
     }
 }
 
-async fn process_episode(item: QueueEpisode, app_handle: tauri::AppHandle) -> Result<String, String> {
+async fn process_episode(mut item: QueueEpisode, app_handle: tauri::AppHandle) -> Result<String, String> {
+
+    let episode_update = format!("episode_updated_{}", item.index);
 
     //let item2 = &item.clone();
     //let result = addDownload(item, app_handle).await;
     println!("Starte: {}", &item.episode.title);
-    sleep(Duration::from_millis(5000)).await;
+    sleep(Duration::from_millis(1000)).await;
+
+    item.state = QueueEpisodeState::Downloading;
+    let _ = app_handle.emit(episode_update.as_str(), &item);
+    sleep(Duration::from_millis(1000)).await;
+
+    item.progress = Progress {currentTime: String::from(""), percentage: 20};
+    let _ = app_handle.emit(episode_update.as_str(), &item);
+    sleep(Duration::from_millis(1000)).await;
+
+    item.progress = Progress {currentTime: String::from(""), percentage: 60};
+    let _ = app_handle.emit(episode_update.as_str(), &item);
+    sleep(Duration::from_millis(1000)).await;
+
+    item.progress = Progress {currentTime: String::from(""), percentage: 100};
+    let _ = app_handle.emit(episode_update.as_str(), &item);
+    sleep(Duration::from_millis(1000)).await;
+
     println!("Erfolgreich: {}", &item.episode.title);
-    
+
+    item.state = QueueEpisodeState::Success;
+    let _ = app_handle.emit(episode_update.as_str(), &item);
+
     //if result.is_ok() {
     //    println!("Erfolgreich: {}", &item2.episode.title)
     //}

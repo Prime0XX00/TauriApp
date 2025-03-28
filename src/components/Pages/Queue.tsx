@@ -1,8 +1,7 @@
 import InfoCard from "../InfoCard";
-import QueueEpisode, { EpisodeState } from "../QueueEpisode";
+import QueueEpisode from "../QueueEpisode";
 import Tooltip from "../Basic/Tooltip";
-import { useContext, useEffect, useState } from "react";
-import { QueueContext } from "../../App";
+import { useEffect, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { IQueueEpisode } from "../../types";
 
@@ -64,11 +63,6 @@ export const Queue = () => {
 					{queue?.map((queueEpisode, index) => (
 						<QueueEpisode
 							queueEpisode={queueEpisode}
-							state={
-								index == 0
-									? EpisodeState.Downloading
-									: EpisodeState.Waiting
-							}
 						></QueueEpisode>
 					))}
 				</div>

@@ -1,26 +1,27 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Tooltip from "./Basic/Tooltip";
-import { IQueueEpisode } from "../types";
-
-export enum EpisodeState {
-	Waiting,
-	Fetching,
-	Downloading,
-	Paused,
-	Successful,
-	Failed,
-}
+import { EpisodeState, IProgress, IQueueEpisode } from "../types";
+import { listen } from "@tauri-apps/api/event";
 
 export interface QueueEpisodeProps {
 	queueEpisode: IQueueEpisode;
-	state: EpisodeState;
 }
 
-const QueueEpisode = ({
-	queueEpisode,
-	state = EpisodeState.Downloading,
-}: QueueEpisodeProps) => {
+const QueueEpisode = ({ queueEpisode }: QueueEpisodeProps) => {
 	const [expanded, setExpanded] = useState(false);
+	const [percentage, setPercentage] = useState(0);
+	const [state, setState] = useState<string>(queueEpisode.state.valueOf());
+
+	useEffect(() => {
+		// Event-Listener für Queue-Updates
+		listen<IQueueEpisode>(
+			`episode_updated_${queueEpisode.index}`,
+			(event) => {
+				setPercentage(event.payload.progress.percentage);
+				setState(event.payload.state.valueOf());
+			}
+		);
+	}, []);
 
 	return (
 		<div className="bg-white border first:border-t border-t-0 first:rounded-t-md last:rounded-b-md flex flex-col space-y-3 border-slate-200 px-5 py-5">
@@ -47,26 +48,28 @@ const QueueEpisode = ({
 						<div className="absolute w-full h-full bg-slate-100 rounded-full"></div>
 						<div
 							className={`${
-								(state == EpisodeState.Waiting && "") ||
-								(state == EpisodeState.Fetching &&
+								(state == EpisodeState.Waiting.valueOf() &&
+									"") ||
+								(state == EpisodeState.Fetching.valueOf() &&
 									"w-full bg-slate-400") ||
-								(state == EpisodeState.Downloading &&
+								(state == EpisodeState.Downloading.valueOf() &&
 									"bg-indigo-700") ||
-								(state == EpisodeState.Paused &&
+								(state == EpisodeState.Paused.valueOf() &&
 									"bg-slate-700") ||
-								(state == EpisodeState.Successful &&
+								(state == EpisodeState.Success.valueOf() &&
 									"w-full bg-emerald-500") ||
-								(state == EpisodeState.Failed &&
+								(state == EpisodeState.Failed.valueOf() &&
 									"w-full bg-red-500")
-							} absolute w-1/2 h-full rounded-full transition-all`}
+							} absolute h-full rounded-full transition-all`}
+							style={{ width: percentage.toString() + "%" }}
 						></div>
 					</div>
 				</div>
 
 				{/* Button Panel */}
 				<div className="flex flex-row space-x-2 items-center">
-					{(state == EpisodeState.Downloading ||
-						state == EpisodeState.Paused) && (
+					{(state == EpisodeState.Downloading.valueOf() ||
+						state == EpisodeState.Paused.valueOf()) && (
 						<Tooltip content={<p>Toggle episode details.</p>}>
 							<button
 								onClick={() => setExpanded((prev) => !prev)}
@@ -77,8 +80,8 @@ const QueueEpisode = ({
 						</Tooltip>
 					)}
 
-					{(state == EpisodeState.Successful ||
-						state == EpisodeState.Failed) && (
+					{(state == EpisodeState.Success.valueOf() ||
+						state == EpisodeState.Failed.valueOf()) && (
 						<Tooltip content={<p>Requeue episode.</p>}>
 							<button
 								onClick={() => setExpanded((prev) => !prev)}
@@ -89,7 +92,7 @@ const QueueEpisode = ({
 						</Tooltip>
 					)}
 
-					<Tooltip content={<p>Remove episode from queue.</p>}>
+					<Tooltip content={<p>Remove episode.</p>}>
 						<button className="material-symbols-rounded p-1 bg-red-500 text-white rounded-md cursor-pointer hover:bg-red-600 !aspect-square">
 							delete_forever
 						</button>

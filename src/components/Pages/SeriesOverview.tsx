@@ -1,10 +1,9 @@
 import { invoke } from "@tauri-apps/api/core";
 import { useEffect, useState } from "react";
-import Tooltip from "../Basic/Tooltip";
 import {
+	EpisodeState,
 	IEpisode,
 	ILanguage,
-	IQueueEpisode,
 	ISeason,
 	ISeries,
 } from "../../types";
@@ -69,6 +68,8 @@ const SeriesOverview = () => {
 	const handleEpisodeDownload = async (episode: IEpisode) => {
 		const result = await invoke("add_episode_to_queue", {
 			queueEpisode: {
+				index: 0,
+				state: EpisodeState.Waiting.valueOf(),
 				episode: episode,
 				language: languages[selectedLanguageIndex],
 				progress: { currentTime: "", percentage: 0 },

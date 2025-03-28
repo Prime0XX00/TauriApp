@@ -26,6 +26,8 @@ export interface ILanguage {
 }
 
 export interface IQueueEpisode {
+	index: number;
+	state: EpisodeState;
 	episode: IEpisode;
 	language: ILanguage;
 	progress: IProgress;
@@ -34,4 +36,13 @@ export interface IQueueEpisode {
 export interface IProgress {
 	currentTime: string;
 	percentage: number;
+}
+
+export enum EpisodeState {
+	Waiting = "Waiting",
+	Fetching = "Fetching",
+	Downloading = "Downloading",
+	Paused = "Paused",
+	Success = "Success",
+	Failed = "Failed",
 }
